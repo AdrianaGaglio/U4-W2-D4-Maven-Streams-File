@@ -3,7 +3,10 @@ package it.epicode;
 import it.epicode.entities.Customer;
 import it.epicode.entities.Order;
 import it.epicode.entities.Product;
+import org.apache.commons.io.FileUtils;
 
+import java.io.File;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -13,7 +16,9 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 public class Application {
-    public static void main(String[] args) {
+    public static final String LOG_PRODOTTI_TXT = "log/prodotti.txt";
+
+    public static void main(String[] args) throws IOException {
 
         // creo catalogo prodotti
         Product p1 = new Product(1L, "T-shirt uomo", "Men's Clothing", 25.0);
@@ -110,9 +115,56 @@ public class Application {
 
         System.out.println("--- ESERCIZIO 5 ---");
 
-//        Map<String, List<Product>> byCategory = products.stream().collect(Collectors.groupingBy(Product::getCategory,
-//                Collectors.));
+        Map<String, Double> byCategory = products.stream().collect(Collectors.groupingBy(Product::getCategory, Collectors.summingDouble(Product::getPrice)));
 
+        System.out.println("Media per categoria:");
+        for (Map.Entry<String, Double> entry : byCategory.entrySet()) {
+            System.out.println("Categoria: " + entry.getKey() + " - Totale: " + entry.getValue());
+        }
 
+        System.out.println("--- ESERCIZIO 6 ---");
+
+        try {
+            saveProductsToLocalDisc(products);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        System.out.println("--- ESERCIZIO 7 ---");
+        try {
+            List<Product> newProductsList = readProductsFromLocalDisc();
+
+            newProductsList.forEach(System.out::println);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    public static void saveProductsToLocalDisc(List<Product> products) throws IOException {
+        File file = new File(LOG_PRODOTTI_TXT);
+        String prodotti = "";
+
+        for (Product p : products) {
+            prodotti += p.getId() + "@" + p.getName() + "@" + p.getCategory() + "@" + p.getPrice() + "#";
+        }
+
+        FileUtils.writeStringToFile(file, prodotti, "UTF-8");
+    }
+
+    public static List<Product> readProductsFromLocalDisc() throws IOException {
+        File file = new File(LOG_PRODOTTI_TXT);
+
+        String productsText = FileUtils.readFileToString(file, "UTF-8");
+        String[] records = productsText.split("#");
+
+        List<Product> products = new ArrayList<>();
+
+        for(int i = 0; i < records.length; i++) {
+            String[] fields = records[i].split("@");
+            products.add(new Product(Long.parseLong(fields[0]), fields[1], fields[2], Double.parseDouble(fields[3])));
+        }
+
+        return products;
     }
 }
